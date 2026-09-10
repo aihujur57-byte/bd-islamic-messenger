@@ -1,25 +1,37 @@
-# BD Islamic Messenger — Cross-device version
+# BD Islamic Messenger — Lite Online
 
-এই সংস্করণে chat/users আর browser `localStorage`-এ রাখা হয় না। Server database-এ রাখা হয় এবং Socket.IO দিয়ে realtime message যায়।
+এটি cross-device online messenger-এর lightweight version।
 
-## চালানোর নিয়ম
+## কী আছে
+- পৃথিবীর যেকোনো জায়গা থেকে একই live server-এ account registration/login
+- এক phone number = এক account
+- unique 4-digit User Code
+- Friend add by User Code
+- realtime text message via Socket.IO
+- message history in PostgreSQL
+- image/video upload (প্রতি ফাইল সর্বোচ্চ 50MB)
+- online/offline presence
+- seen status
+- block/unblock API
+- responsive web UI — Chrome-এ সরাসরি চলে
+- একই web app পরে Android/Play Store wrapper-এ ব্যবহার করা যাবে
 
-1. Node.js 18+ ইনস্টল করুন।
-2. এই ফোল্ডারে terminal খুলুন।
-3. `npm install`
-4. একটি শক্ত JWT secret সেট করুন:
-   - Linux/macOS: `export JWT_SECRET="একটি-লম্বা-গোপন-চাবি"`
-   - Windows PowerShell: `$env:JWT_SECRET="একটি-লম্বা-গোপন-চাবি"`
-5. `npm start`
-6. একই Wi‑Fi-তে পরীক্ষার জন্য অন্য ফোনে PC-এর LAN IP দিয়ে খুলুন, যেমন `http://192.168.1.10:3000`.
-7. Internet-এ দুই ফোন থেকে ব্যবহার করতে হলে server-টি Render/Railway/VPS-এর মতো Node hosting-এ deploy করুন এবং সেই HTTPS address ব্যবহার করুন।
+## Render deployment
+1. GitHub-এ এই project-এর সব file রাখুন।
+2. Render Web Service বানান।
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. Environment Variable:
+   - `JWT_SECRET` = Render-এর Generate ব্যবহার করুন
+   - `DATABASE_URL` = PostgreSQL database-এর connection string
+6. PostgreSQL database যোগ করুন। Production-এ database-এর persistent storage ব্যবহার করুন।
+7. Web Service-এর public HTTPS URL Chrome-এ খুলুন।
 
-## গুরুত্বপূর্ণ
-- OTP নেই, তাই ফোন নম্বর লিখলেই SIM ownership প্রমাণ হয় না।
-- ৪-digit PIN মাত্র ১০,০০০ সম্ভাবনা—এটি শক্তিশালী password নয়। Production-এ rate limiting এবং পরে stronger login যোগ করা ভালো।
-- `JWT_SECRET` অবশ্যই বদলাবেন।
-- Image/video এখন server-এর `uploads` folder-এ যায়। বড় production app-এ object storage ব্যবহার করা ভালো।
-- SQLite ছোট/মাঝারি ব্যবহারের জন্য। বড় ব্যবহারকারী হলে PostgreSQL ব্যবহার করুন।
+## Media storage
+এই version-এর upload server-এর `uploads/` folder-এ রাখে। Production-এ durable media storage (যেমন S3-compatible object storage) ব্যবহার করা ভালো। Render filesystem restart/deploy-এর পর media হারানোর ঝুঁকি এড়াতে persistent disk/object storage প্রয়োজন।
 
-## HopWeb
-HopWeb-এ শুধু `public/index.html` রাখলে frontend দেখা যাবে, কিন্তু cross-device messaging-এর জন্য `server.js`-ও internet-এ চলতে হবে। শুধু HTML upload করলে দুই ফোনের মধ্যে সত্যিকারের chat হবে না।
+## Security note
+4-digit PIN ইচ্ছাকৃতভাবে রাখা হয়েছে কারণ requirements-এ OTP বাদ দেওয়া হয়েছে। এটি শক্তিশালী authentication নয়। Production-এ rate limiting, login attempt protection এবং সম্ভব হলে stronger passcode যোগ করা উচিত।
+
+## Global scale
+“সব ফোন” বলতে fixed two-device limit নেই। একই server/database ব্যবহার করা যত account hosting capacity ও storage অনুমতি দেয় তত account/friend/chat চলবে। বড় scale হলে PostgreSQL + object storage + CDN + multiple server instances প্রয়োজন।
