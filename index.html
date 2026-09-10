@@ -2,167 +2,141 @@
 <html lang="bn">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b7a3b">
 <title>BD Islamic Messenger</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#eef7f0;color:#123;overflow:hidden}
-:root{--g:#087443;--g2:#075b35;--red:#c62828;--card:#fff}
-button,input,select{font:inherit}button{border:0;cursor:pointer}
-.auth{height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(145deg,#064f30,#0a8b50)}
-.card{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px;box-shadow:0 18px 50px #0004}
-.logo{width:72px;height:72px;border-radius:50%;background:#087443;color:#fff;display:grid;place-items:center;font-size:34px;margin:auto}
-h1{text-align:center;color:var(--g2);margin:10px 0 5px}.sub{text-align:center;color:#687; margin-bottom:18px}
-label{display:block;font-size:13px;font-weight:bold;margin:10px 0 5px}
-input,select{width:100%;padding:12px;border:1px solid #ccd9d1;border-radius:11px;outline:0}
-input:focus,select:focus{border-color:var(--g)}
-.primary{width:100%;padding:12px;background:var(--g);color:#fff;border-radius:11px;margin-top:14px;font-weight:bold}
-.secondary{width:100%;padding:11px;background:#e9f4ee;color:var(--g2);border-radius:11px;margin-top:8px}
-.msg{min-height:20px;text-align:center;color:var(--red);font-size:13px;margin-top:8px}
-.app{height:100vh;display:flex;background:#f5faf6}.sidebar{width:360px;max-width:100%;border-right:1px solid #dbe7df;background:#fff;display:flex;flex-direction:column}
-.top{background:var(--g);color:#fff;padding:14px;display:flex;align-items:center;gap:10px}.avatar{width:42px;height:42px;border-radius:50%;background:#fff;color:var(--g);display:grid;place-items:center;font-weight:bold}.top .me{flex:1}.top small{opacity:.85}.icon{background:transparent;color:inherit;font-size:21px;padding:6px}
-.search{padding:10px}.search input{background:#f1f6f3;border:0}
-.list{overflow:auto;flex:1}.row{padding:12px 14px;border-bottom:1px solid #edf2ee;display:flex;gap:11px;align-items:center}.row:hover{background:#f2f8f4}.row .info{flex:1;min-width:0}.row b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row small{color:#718078}.dot{width:10px;height:10px;border-radius:50%;background:#d33;display:inline-block}.dot.on{background:#13a05a}
-.empty{text-align:center;padding:45px 20px;color:#718078}
-.main{flex:1;display:flex;flex-direction:column;min-width:0}.chathead{padding:12px 16px;background:#fff;border-bottom:1px solid #dbe7df;display:flex;align-items:center;gap:10px}.chathead .info{flex:1}.messages{flex:1;overflow:auto;padding:18px;background:#e9f5ed}.bubble{max-width:min(75%,520px);padding:9px 11px;margin:7px 0;border-radius:14px;position:relative;word-break:break-word}.mine{margin-left:auto;background:#d2f3dd;border-bottom-right-radius:4px}.theirs{background:#fff;border-bottom-left-radius:4px}.time{font-size:10px;color:#718078;margin-top:4px;text-align:right}.composer{background:#fff;padding:9px;display:flex;gap:7px;align-items:center}.composer input{flex:1}.send{background:var(--g);color:#fff;border-radius:50%;width:43px;height:43px}.panel{position:fixed;right:15px;top:62px;width:min(330px,calc(100% - 30px));background:#fff;border-radius:15px;box-shadow:0 10px 35px #0003;padding:15px;z-index:5}.panel h3{margin-top:0}.hidden{display:none!important}
-.modal{position:fixed;inset:0;background:#0006;display:grid;place-items:center;padding:18px;z-index:10}.modal .card{max-height:90vh;overflow:auto}
-.media{max-width:100%;max-height:260px;border-radius:10px;margin-top:5px}.filebtn{background:#eef6f0;color:var(--g);padding:10px;border-radius:10px}
-@media(max-width:700px){.sidebar{width:100%}.main{display:none}.app.chat-open .sidebar{display:none}.app.chat-open .main{display:flex}.sidebar{border:0}.chathead .back{display:block}.top{padding-top:calc(10px + env(safe-area-inset-top))}}
-@media(min-width:701px){.back{display:none!important}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f2f7f3;color:#123}
+button,input{font:inherit}button{cursor:pointer}.hide{display:none!important}
+.top{height:58px;background:#08783a;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;position:sticky;top:0;z-index:5}
+.top h1{font-size:18px;margin:0}.icon{border:0;background:transparent;color:inherit;font-size:24px;padding:6px}
+.wrap{max-width:720px;margin:auto}.page{min-height:100vh;background:#f2f7f3}
+.card{background:#fff;border-radius:14px;padding:16px;margin:14px;box-shadow:0 2px 10px #00000010}
+input,select{width:100%;padding:12px;border:1px solid #ccd8d0;border-radius:10px;margin:6px 0 10px;background:#fff}
+.primary{width:100%;padding:12px;border:0;border-radius:10px;background:#08783a;color:#fff;font-weight:700}
+.secondary{width:100%;padding:11px;border:1px solid #08783a;border-radius:10px;background:#fff;color:#08783a;font-weight:700;margin-top:8px}
+.muted{color:#66756d;font-size:13px}.err{color:#b00020;font-size:13px}.ok{color:#08783a;font-size:13px}
+.tabs{display:flex;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:58px;z-index:4}.tab{flex:1;padding:12px;border:0;background:#fff;color:#53635a}.tab.on{color:#08783a;font-weight:700;border-bottom:3px solid #08783a}
+.row{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #eef1ef;background:#fff}.avatar{width:42px;height:42px;border-radius:50%;background:#08783a;color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.grow{flex:1;min-width:0}.name{font-weight:700}.preview{font-size:13px;color:#718078;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:#d33}.dot.on{background:#16a34a}
+.chat{height:calc(100vh - 58px);display:flex;flex-direction:column}.messages{flex:1;overflow:auto;padding:12px;background:#eaf4ed}
+.bubble{max-width:82%;padding:9px 11px;border-radius:13px;margin:5px 0;white-space:pre-wrap;word-break:break-word}.mine{margin-left:auto;background:#ccefd8}.theirs{background:#fff}
+.bubble img,.bubble video{max-width:100%;border-radius:9px;display:block}.composer{display:flex;gap:7px;padding:8px;background:#fff;border-top:1px solid #ddd}.composer input{margin:0}.send{width:48px;border:0;border-radius:10px;background:#08783a;color:#fff}.attach{width:45px;border:1px solid #ccc;border-radius:10px;background:#fff}
+.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:end center;z-index:20}.sheet{width:min(720px,100%);background:#fff;border-radius:18px 18px 0 0;padding:16px;max-height:85vh;overflow:auto}
+.friendBtn{border:0;background:#e9f6ee;color:#08783a;border-radius:9px;padding:8px 10px;font-weight:700}
+.search{padding:10px;background:#f2f7f3}
+.auth{max-width:440px;margin:0 auto;padding:28px 14px}.logo{font-size:42px;text-align:center}.auth h2{text-align:center;color:#08783a}
+label{font-size:13px;font-weight:700}.smallbtn{border:0;background:transparent;color:#08783a;font-weight:700;padding:4px}
 </style>
 </head>
 <body>
-<div id="auth" class="auth">
- <div class="card">
-  <div class="logo">☪</div><h1>BD Islamic Messenger</h1><div class="sub">অনলাইনে বন্ধুদের সাথে নিরাপদে যোগাযোগ</div>
-  <div id="registerFields">
-   <label>নাম</label><input id="name" placeholder="আপনার নাম">
-   <label>দেশ</label><select id="country"><option value="+880">🇧🇩 বাংলাদেশ (+880)</option><option value="+91">🇮🇳 ভারত (+91)</option><option value="+92">🇵🇰 পাকিস্তান (+92)</option><option value="+966">🇸🇦 সৌদি আরব (+966)</option><option value="+971">🇦🇪 UAE (+971)</option><option value="+1">🇺🇸 USA (+1)</option></select>
-   <label>ফোন নম্বর</label><input id="phone" inputmode="tel" placeholder="01982641237">
-  </div>
-  <label>৪ সংখ্যার User Code / PIN</label><input id="pin" inputmode="numeric" maxlength="4" placeholder="1234">
-  <button class="primary" onclick="register()">নতুন অ্যাকাউন্ট তৈরি</button>
-  <button class="secondary" onclick="login()">নম্বর + PIN দিয়ে লগইন</button>
-  <div id="authMsg" class="msg"></div>
-  <small style="display:block;text-align:center;color:#789;margin-top:12px">নোট: এই সংস্করণে OTP নেই। ফোন নম্বর + ৪ সংখ্যার PIN দিয়ে লগইন হয়।</small>
- </div>
-</div>
-
-<div id="app" class="app hidden">
- <aside class="sidebar">
-  <div class="top"><div class="avatar" id="myAvatar">U</div><div class="me"><b id="myName">User</b><small id="myCode"></small></div><button class="icon" onclick="togglePanel()">⋮</button></div>
-  <div class="search"><input id="search" placeholder="বন্ধু খুঁজুন..." oninput="renderFriends()"></div>
-  <div id="friends" class="list"></div>
- </aside>
- <main class="main">
-  <div class="chathead"><button class="icon back" onclick="closeChat()">‹</button><div class="avatar" id="friendAvatar">?</div><div class="info"><b id="friendName">চ্যাট</b><small id="friendStatus">অফলাইন</small></div><button class="icon" onclick="friendInfo()">ⓘ</button></div>
-  <div id="messages" class="messages"></div>
-  <div class="composer"><label class="filebtn" style="margin:0">＋<input id="media" type="file" accept="image/*,video/*" hidden onchange="uploadMedia()"></label><input id="text" placeholder="মেসেজ লিখুন..." onkeydown="if(event.key==='Enter')send()"><button class="send" onclick="send()">➤</button></div>
- </main>
- <div id="panel" class="panel hidden">
-  <h3>অ্যাকাউন্ট ও সেটিংস</h3>
-  <p><b id="panelName"></b><br><small id="panelPhone"></small></p>
-  <button class="secondary" onclick="addFriend()">＋ বন্ধু যোগ করুন</button>
-  <button class="secondary" onclick="showAccounts()">অ্যাকাউন্ট পরিবর্তন</button>
-  <button class="secondary" onclick="logout()">লগআউট</button>
-  <p style="font-size:12px;color:#687">নির্মাতা: হাফেজ মোহাম্মদ বাইজিদ হাসান<br>যোগাযোগ: 01982641237</p>
- </div>
-</div>
-
-<div id="modal" class="modal hidden"><div class="card"><div id="modalBody"></div><button class="secondary" onclick="closeModal()">বন্ধ করুন</button></div></div>
-
-<script src="/socket.io/socket.io.js"></script>
+<div id="app" class="page"></div>
+<div id="modal" class="modal hide"><div class="sheet" id="sheet"></div></div>
 <script>
 const API=location.origin;
-let token=localStorage.getItem('bd_token'), me=null, friends=[], current=null, socket=null, messages=[];
+let token=localStorage.getItem('bdim_token')||'';
+let me=null, friends=[], currentFriend=null, socket=null, poll=null;
 const $=id=>document.getElementById(id);
-function msg(t){$('authMsg').textContent=t}
 async function api(path,opt={}){
- opt.headers=Object.assign({'Content-Type':'application/json'},opt.headers||{},token?{'Authorization':'Bearer '+token}:{});
- let r=await fetch(API+path,opt), d=await r.json().catch(()=>({}));
- if(!r.ok) throw Error(d.error||'Server error'); return d;
+  opt.headers=opt.headers||{};
+  if(token) opt.headers.Authorization='Bearer '+token;
+  const r=await fetch(API+path,opt);
+  const t=await r.text(); let d={}; try{d=JSON.parse(t)}catch{}
+  if(!r.ok) throw new Error(d.error||'সার্ভার সমস্যা');
+  return d;
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function auth(){
+ $('app').innerHTML=`<div class="auth"><div class="logo">☪️</div><h2>BD Islamic Messenger</h2>
+ <div class="card"><h3>নতুন অ্যাকাউন্ট</h3>
+ <label>নাম</label><input id="rn" placeholder="আপনার নাম">
+ <label>দেশ</label><select id="rc"><option value="+880">🇧🇩 বাংলাদেশ +880</option><option value="+91">🇮🇳 ভারত +91</option><option value="+92">🇵🇰 পাকিস্তান +92</option><option value="+966">🇸🇦 সৌদি আরব +966</option><option value="+971">🇦🇪 UAE +971</option><option value="+44">🇬🇧 UK +44</option><option value="+1">🇺🇸 USA +1</option></select>
+ <label>ফোন নম্বর</label><input id="rp" inputmode="tel" placeholder="ফোন নম্বর">
+ <label>৪ ডিজিট User Code / PIN</label><input id="rpin" inputmode="numeric" maxlength="4" placeholder="যেমন 1234">
+ <button class="primary" onclick="register()">অ্যাকাউন্ট তৈরি করুন</button><p id="ae" class="err"></p>
+ </div>
+ <div class="card"><h3>লগইন</h3><input id="lp" inputmode="tel" placeholder="ফোন নম্বর"><input id="lpin" inputmode="numeric" maxlength="4" placeholder="৪ ডিজিট User Code / PIN">
+ <button class="primary" onclick="login()">লগইন</button><p id="le" class="err"></p></div>
+ <p class="muted">একটি ফোন নম্বর ও একটি User Code একটি অ্যাকাউন্টের জন্য ব্যবহার হবে। OTP নেই।</p></div>`;
 }
 async function register(){
  try{
-  const name=$('name').value.trim(), phone=$('phone').value.trim(), pin=$('pin').value.trim();
-  const d=await api('/api/register',{method:'POST',body:JSON.stringify({name,phone,country:$('country').value,pin})});
-  token=d.token; localStorage.setItem('bd_token',token); await start();
- }catch(e){msg(e.message)}
+  const d=await api('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('rn').value,country:$('rc').value,phone:$('rp').value,pin:$('rpin').value})});
+  token=d.token;localStorage.setItem('bdim_token',token);await start();
+ }catch(e){$('ae').textContent=e.message}
 }
 async function login(){
  try{
-  const phone=$('phone').value.trim(), pin=$('pin').value.trim();
-  const d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,pin})});
-  token=d.token; localStorage.setItem('bd_token',token); await start();
- }catch(e){msg(e.message)}
+  const d=await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('lp').value,pin:$('lpin').value})});
+  token=d.token;localStorage.setItem('bdim_token',token);await start();
+ }catch(e){$('le').textContent=e.message}
 }
 async function start(){
- try{me=(await api('/api/me')).user}catch(e){localStorage.removeItem('bd_token');token=null;return msg('সেশন শেষ হয়েছে')}
- $('auth').classList.add('hidden');$('app').classList.remove('hidden');
- $('myName').textContent=me.name;$('myCode').textContent='User Code: '+me.friend_code;
- $('myAvatar').textContent=(me.name||'U')[0].toUpperCase();
- $('panelName').textContent=me.name;$('panelPhone').textContent=me.phone;
- await loadFriends(); connectSocket();
+ try{me=await api('/api/me');friends=await api('/api/friends');home();connect()}catch(e){token='';localStorage.removeItem('bdim_token');auth()}
 }
-async function loadFriends(){friends=(await api('/api/friends')).friends;renderFriends()}
-function renderFriends(){
- const q=$('search').value.toLowerCase();
- const arr=friends.filter(f=>(f.name+' '+f.friend_code).toLowerCase().includes(q));
- $('friends').innerHTML=arr.length?arr.map(f=>`<div class="row" onclick="openChat('${f.friend_code}')"><div class="avatar">${(f.name||'?')[0]}</div><div class="info"><b>${esc(f.name)}</b><small>User Code: ${f.friend_code}</small></div><span class="dot ${f.online?'on':''}"></span></div>`).join(''):'<div class="empty">কোনো বন্ধু নেই। ⋮ থেকে “বন্ধু যোগ করুন” চাপুন।</div>';
+function header(title='BD Islamic Messenger',back=false){return `<div class="top">${back?`<button class="icon" onclick="home()">‹</button>`:'<span></span>'}<h1>${esc(title)}</h1><button class="icon" onclick="menu()">⋮</button></div>`}
+function home(){
+ currentFriend=null;
+ $('app').innerHTML=`${header()}<div class="tabs"><button class="tab on" onclick="showChats()">চ্যাট</button><button class="tab" onclick="showFriends()">ফ্রেন্ড</button></div><div id="body"></div>`;
+ showChats();
+}
+function showChats(){
+ const list=[...friends].sort((a,b)=>(b.lastMessageAt||0)-(a.lastMessageAt||0));
+ $('body').innerHTML=`<div class="search"><input placeholder="নাম বা User Code খুঁজুন" oninput="filterChats(this.value)"></div><div id="chatlist">${list.map(frow).join('')||'<div class="card">কোনো ফ্রেন্ড নেই। Friend থেকে User Code দিয়ে যোগ করুন।</div>'}</div>`;
+}
+function filterChats(q){let x=q.toLowerCase();$('chatlist').innerHTML=friends.filter(f=>(f.name+' '+f.code).toLowerCase().includes(x)).map(frow).join('')||'<div class="card">পাওয়া যায়নি</div>'}
+function frow(f){return `<div class="row" onclick="openChat('${esc(f.code)}')"><div class="avatar">${esc((f.name||'?')[0])}</div><div class="grow"><div class="name">${esc(f.name)} <span class="dot ${f.online?'on':''}"></span></div><div class="preview">Code: ${esc(f.code)}${f.unread?' • নতুন মেসেজ':''}</div></div></div>`}
+function showFriends(){
+ $('body').innerHTML=`<div class="card"><button class="primary" onclick="addFriend()">＋ User Code দিয়ে Friend যোগ করুন</button></div>${friends.map(frow).join('')}`;
+}
+function addFriend(){
+ openModal(`<h3>Friend যোগ করুন</h3><input id="fc" inputmode="numeric" maxlength="4" placeholder="৪ ডিজিট User Code"><button class="primary" onclick="doAddFriend()">যোগ করুন</button><p id="fe" class="err"></p>`);
+}
+async function doAddFriend(){
+ try{await api('/api/friends/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('fc').value})});closeModal();friends=await api('/api/friends');showFriends()}catch(e){$('fe').textContent=e.message}
 }
 async function openChat(code){
- current=friends.find(f=>f.friend_code===code); if(!current)return;
- $('friendName').textContent=current.name;$('friendAvatar').textContent=(current.name||'?')[0];
- $('friendStatus').textContent=current.online?'অনলাইন':'অফলাইন';
- $('app').classList.add('chat-open'); await loadMessages(); await api('/api/chats/'+encodeURIComponent(code)+'/read',{method:'POST'}).catch(()=>{});
+ currentFriend=friends.find(x=>x.code===code); if(!currentFriend)return;
+ $('app').innerHTML=`${header(currentFriend.name,true)}<div class="chat"><div id="msgs" class="messages"></div><div class="composer"><input id="msg" placeholder="মেসেজ লিখুন..." onkeydown="if(event.key==='Enter')sendText()"><label class="attach">📎<input id="file" type="file" accept="image/*,video/*" hidden onchange="sendMedia()"></label><button class="send" onclick="sendText()">➤</button></div></div>`;
+ await loadMessages(); await api('/api/chats/'+encodeURIComponent(code)+'/read',{method:'POST'}).catch(()=>{});
+ currentFriend.unread=0;
 }
-function closeChat(){$('app').classList.remove('chat-open');current=null}
-async function loadMessages(){messages=(await api('/api/chats/'+encodeURIComponent(current.friend_code)+'/messages')).messages;renderMessages()}
-function renderMessages(){
- $('messages').innerHTML=messages.map(m=>{
-  let body=m.type==='image'?`<img class="media" src="${esc(m.media_url)}">`:m.type==='video'?`<video class="media" controls src="${esc(m.media_url)}"></video>`:esc(m.text||'');
-  return `<div class="bubble ${m.sender_id===me.id?'mine':'theirs'}">${body}<div class="time">${new Date(m.created_at).toLocaleTimeString('bn-BD',{hour:'2-digit',minute:'2-digit'})} ${m.sender_id===me.id?(m.seen_at?'✓✓':'✓'):''}</div></div>`
- }).join('');
- $('messages').scrollTop=$('messages').scrollHeight;
+async function loadMessages(){
+ try{let d=await api('/api/chats/'+encodeURIComponent(currentFriend.code)+'/messages');renderMessages(d.messages)}catch(e){$('msgs').innerHTML='<div class="card">'+esc(e.message)+'</div>'}
 }
-async function send(){
- if(!current)return;let text=$('text').value.trim();if(!text)return;
- $('text').value='';
- try{let d=await api('/api/chats/'+encodeURIComponent(current.friend_code)+'/messages',{method:'POST',body:JSON.stringify({type:'text',text})});messages.push(d.message);renderMessages()}catch(e){alert(e.message)}
+function renderMessages(arr){
+ $('msgs').innerHTML=arr.map(m=>`<div class="bubble ${m.senderCode===me.code?'mine':'theirs'}">${m.type==='text'?esc(m.body):m.type==='image'?`<img src="${esc(m.mediaUrl)}">`:m.type==='video'?`<video src="${esc(m.mediaUrl)}" controls playsinline></video>`:''}<div class="muted">${new Date(m.createdAt).toLocaleString('bn-BD')} ${m.senderCode===me.code?(m.seen?'✓✓':'✓'):''}</div></div>`).join('');
+ $('msgs').scrollTop=$('msgs').scrollHeight;
 }
-async function uploadMedia(){
- if(!current)return;let f=$('media').files[0];if(!f)return;
- let fd=new FormData();fd.append('file',f);fd.append('friend_code',current.friend_code);
- let r=await fetch(API+'/api/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:fd});
- let d=await r.json();if(!r.ok)return alert(d.error||'আপলোড ব্যর্থ');
- let type=f.type.startsWith('video/')?'video':'image';
- let x=await api('/api/chats/'+encodeURIComponent(current.friend_code)+'/messages',{method:'POST',body:JSON.stringify({type,media_url:d.url,text:''})});
- messages.push(x.message);renderMessages();$('media').value='';
+async function sendText(){
+ let v=$('msg').value.trim();if(!v||!currentFriend)return;
+ $('msg').value='';
+ try{await api('/api/chats/'+encodeURIComponent(currentFriend.code)+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'text',body:v})});await loadMessages()}catch(e){alert(e.message)}
 }
-function connectSocket(){
- socket=io({auth:{token}});
- socket.on('message:new',async m=>{
-  if(current && (m.sender_id===current.id||m.receiver_id===current.id)){messages.push(m);renderMessages()}
-  await loadFriends();
- });
- socket.on('presence',p=>{let f=friends.find(x=>x.id===p.user_id);if(f){f.online=p.online;renderFriends();if(current&&current.id===p.user_id)$('friendStatus').textContent=p.online?'অনলাইন':'অফলাইন'}});
+async function sendMedia(){
+ const f=$('file').files[0];if(!f)return;
+ if(f.size>50*1024*1024){alert('ফাইল সর্বোচ্চ ৫০MB');return}
+ const fd=new FormData();fd.append('file',f);
+ try{const up=await api('/api/upload',{method:'POST',body:fd});await api('/api/chats/'+encodeURIComponent(currentFriend.code)+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:up.type,mediaUrl:up.url,body:''})});await loadMessages()}catch(e){alert(e.message)}
 }
-async function addFriend(){
- let code=prompt('বন্ধুর ৪ সংখ্যার User Code দিন:');if(!code)return;
- try{let d=await api('/api/friends/add',{method:'POST',body:JSON.stringify({friend_code:code})});alert(d.message);await loadFriends()}catch(e){alert(e.message)}
+function connect(){
+ if(socket)socket.disconnect();
+ const s=document.createElement('script');s.src='/socket.io/socket.io.js';s.onload=()=>{
+  socket=io({auth:{token}});
+  socket.on('message:new',async m=>{if(currentFriend&&m.senderCode===currentFriend.code){await loadMessages();await api('/api/chats/'+encodeURIComponent(currentFriend.code)+'/read',{method:'POST'})}else{friends=await api('/api/friends');if(!currentFriend)showChats()}});
+  socket.on('presence',p=>{let f=friends.find(x=>x.code===p.code);if(f)f.online=p.online;if(!currentFriend)showChats()});
+ };
+ document.body.appendChild(s);
 }
-async function friendInfo(){
- if(!current)return;
- $('modalBody').innerHTML=`<h2>${esc(current.name)}</h2><p>User Code: <b>${current.friend_code}</b></p><p>ফোন: ${esc(current.phone||'')}</p><button class="primary" onclick="blockUser()">${current.blocked?'Unblock':'Block'}</button>`;
- $('modal').classList.remove('hidden');
+function menu(){
+ openModal(`<h3>${esc(me.name)}</h3><p>ফোন: ${esc(me.phone)}</p><p>User Code: <b>${esc(me.code)}</b></p><button class="secondary" onclick="addFriend()">Friend যোগ করুন</button><button class="secondary" onclick="openAbout()">আমাকে কে বানিয়েছে?</button><button class="secondary" onclick="logout()">লগআউট</button>`);
 }
-async function blockUser(){try{let d=await api('/api/block/'+encodeURIComponent(current.friend_code),{method:current.blocked?'DELETE':'POST'});alert(d.message);closeModal();await loadFriends()}catch(e){alert(e.message)}}
-function togglePanel(){$('panel').classList.toggle('hidden')}
-function showAccounts(){
- api('/api/accounts').then(d=>{$('modalBody').innerHTML='<h3>এই ডিভাইসের সেভ করা অ্যাকাউন্ট</h3>'+d.accounts.map(a=>`<p><b>${esc(a.name)}</b><br>User Code: ${a.friend_code}</p>`).join('')+'<button class="primary" onclick="location.reload()">নতুন অ্যাকাউন্ট লগইন/রেজিস্টার</button>';$('modal').classList.remove('hidden')})
-}
-function logout(){localStorage.removeItem('bd_token');location.reload()}
-function closeModal(){$('modal').classList.add('hidden')}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-if(token)start();
+function openAbout(){openModal('<h3>BD Islamic Messenger</h3><p>আমাকে হাফেজ মোহাম্মদ বাইজিদ হাসান বানিয়েছে। আমার মালিকের সাথে যোগাযোগ করতে পারেন: 01982641237</p>')}
+function openModal(x){$('sheet').innerHTML=x;$('modal').classList.remove('hide')}
+function closeModal(){$('modal').classList.add('hide')}
+$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()}
+function logout(){token='';localStorage.removeItem('bdim_token');if(socket)socket.disconnect();closeModal();auth()}
+if(token)start();else auth();
 </script>
 </body></html>
