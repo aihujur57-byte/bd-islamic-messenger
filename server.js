@@ -32,13 +32,27 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   }
 });
+
 const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 app.use('/uploads', express.static(uploadDir));
-app.use(express.static(__dirname));
+
+/*
+ * IMPORTANT:
+ * Do not let express.static automatically serve index.html.
+ * The root route below sends index.html explicitly as text/html.
+ */
+app.use(express.static(__dirname, {
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (path.extname(filePath).toLowerCase() === '.html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+  }
+}));
 
 const pool = DATABASE_URL
   ? new Pool({
@@ -115,18 +129,50 @@ function tokenFor(user) {
   );
 }
 
+function publicUser(u) {
+  return {
+    id: u.id,
+    name: u.name,
+    country: u.country,
+    phone: u.phone,
+    code: u.code
+  };
+}
+
+function publicMessage(m) {
+  return {
+    id: m.id,
+    senderId: m.sender_id,
+    receiverId: m.receiver_id,
+    type: m.type,
+    body: m.body || '',
+    mediaUrl: m.media_url || '',
+    seen: !!m.seen,
+    createdAt: m.created_at,
+    senderName: m.sender_name || '',
+    senderCode: m.sender_code || ''
+  };
+}
+
 async function auth(req, res, next) {
   try {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    if (!token) return res.status(401).json({ error: 'লগইন প্রয়োজন' });
+
+    if (!token) {
+      return res.status(401).json({ error: 'লগইন প্রয়োজন' });
+    }
 
     const data = jwt.verify(token, JWT_SECRET);
+
     const r = await query(
       'SELECT id,name,country,phone,code FROM users WHERE id=$1',
       [data.id]
     );
-    if (!r.rowCount) return res.status(401).json({ error: 'অ্যাকাউন্ট পাওয়া যায়নি' });
+
+    if (!r.rowCount) {
+      return res.status(401).json({ error: 'অ্যাকাউন্ট পাওয়া যায়নি' });
+    }
 
     req.user = r.rows[0];
     next();
@@ -168,6 +214,7 @@ app.post('/api/register', async (req, res) => {
       'SELECT id FROM users WHERE phone=$1 OR code=$2',
       [phone, pin]
     );
+
     if (existing.rowCount) {
       return res.status(409).json({
         error: 'এই ফোন নম্বর অথবা User Code আগে থেকেই ব্যবহার করা হয়েছে'
@@ -175,6 +222,7 @@ app.post('/api/register', async (req, res) => {
     }
 
     const pinHash = await bcrypt.hash(pin, 10);
+
     const r = await query(
       `INSERT INTO users(name,country,phone,pin_hash,code)
        VALUES($1,$2,$3,$4,$5)
@@ -183,10 +231,16 @@ app.post('/api/register', async (req, res) => {
     );
 
     const user = r.rows[0];
-    res.json({ token: tokenFor(user), user });
+
+    res.json({
+      token: tokenFor(user),
+      user: publicUser(user)
+    });
   } catch (e) {
     console.error(e);
-    res.status(e.statusCode || 500).json({ error: 'রেজিস্ট্রেশন ব্যর্থ হয়েছে' });
+    res.status(e.statusCode || 500).json({
+      error: 'রেজিস্ট্রেশন ব্যর্থ হয়েছে'
+    });
   }
 });
 
@@ -201,27 +255,28 @@ app.post('/api/login', async (req, res) => {
     );
 
     if (!r.rowCount || !(await bcrypt.compare(pin, r.rows[0].pin_hash))) {
-      return res.status(401).json({ error: 'ফোন নম্বর বা User Code ভুল' });
+      return res.status(401).json({
+        error: 'ফোন নম্বর বা User Code ভুল'
+      });
     }
 
     const u = r.rows[0];
-    const user = {
-      id: u.id,
-      name: u.name,
-      country: u.country,
-      phone: u.phone,
-      code: u.code
-    };
+    const user = publicUser(u);
 
-    res.json({ token: tokenFor(user), user });
+    res.json({
+      token: tokenFor(user),
+      user
+    });
   } catch (e) {
     console.error(e);
-    res.status(e.statusCode || 500).json({ error: 'লগইন ব্যর্থ হয়েছে' });
+    res.status(e.statusCode || 500).json({
+      error: 'লগইন ব্যর্থ হয়েছে'
+    });
   }
 });
 
 app.get('/api/me', auth, (req, res) => {
-  res.json(req.user);
+  res.json(publicUser(req.user));
 });
 
 app.get('/api/friends', auth, async (req, res) => {
@@ -231,7 +286,9 @@ app.get('/api/friends', auth, async (req, res) => {
         u.id, u.name, u.country, u.phone, u.code,
         EXISTS(
           SELECT 1 FROM messages m
-          WHERE m.sender_id=u.id AND m.receiver_id=$1 AND m.seen=false
+          WHERE m.sender_id=u.id
+            AND m.receiver_id=$1
+            AND m.seen=false
         ) AS unread
       FROM users u
       JOIN friendships f ON f.friend_id=u.id
@@ -246,33 +303,55 @@ app.get('/api/friends', auth, async (req, res) => {
     );
 
     res.json(r.rows.map(u => ({
-      ...u,
+      ...publicUser(u),
+      unread: !!u.unread,
       online: sockets.has(u.id)
     })));
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'বন্ধু তালিকা পাওয়া যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'বন্ধু তালিকা পাওয়া যায়নি'
+    });
   }
 });
 
 app.get('/api/users/by-code/:code', auth, async (req, res) => {
   try {
     const user = await findByCode(req.params.code);
-    if (!user) return res.status(404).json({ error: 'User Code পাওয়া যায়নি' });
-    if (user.id === req.user.id) {
-      return res.status(400).json({ error: 'নিজেকে বন্ধু করা যাবে না' });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User Code পাওয়া যায়নি'
+      });
     }
-    res.json(user);
+
+    if (user.id === req.user.id) {
+      return res.status(400).json({
+        error: 'নিজেকে বন্ধু করা যাবে না'
+      });
+    }
+
+    res.json(publicUser(user));
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'User খোঁজা যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'User খোঁজা যায়নি'
+    });
   }
 });
 
 app.post('/api/friends/add', auth, async (req, res) => {
   try {
     const friend = await findByCode(req.body.code);
-    if (!friend) return res.status(404).json({ error: 'User Code পাওয়া যায়নি' });
+
+    if (!friend) {
+      return res.status(404).json({
+        error: 'User Code পাওয়া যায়নি'
+      });
+    }
+
     if (friend.id === req.user.id) {
-      return res.status(400).json({ error: 'নিজেকে বন্ধু করা যাবে না' });
+      return res.status(400).json({
+        error: 'নিজেকে বন্ধু করা যাবে না'
+      });
     }
 
     const blocked = await query(
@@ -281,22 +360,35 @@ app.post('/api/friends/add', auth, async (req, res) => {
           OR (user_id=$2 AND blocked_id=$1)`,
       [req.user.id, friend.id]
     );
+
     if (blocked.rowCount) {
-      return res.status(403).json({ error: 'এই ব্যবহারকারীর সাথে Block সম্পর্ক আছে' });
+      return res.status(403).json({
+        error: 'এই ব্যবহারকারীর সাথে Block সম্পর্ক আছে'
+      });
     }
 
     await query(
-      'INSERT INTO friendships(user_id,friend_id) VALUES($1,$2) ON CONFLICT DO NOTHING',
+      `INSERT INTO friendships(user_id,friend_id)
+       VALUES($1,$2)
+       ON CONFLICT DO NOTHING`,
       [req.user.id, friend.id]
     );
+
     await query(
-      'INSERT INTO friendships(user_id,friend_id) VALUES($1,$2) ON CONFLICT DO NOTHING',
+      `INSERT INTO friendships(user_id,friend_id)
+       VALUES($1,$2)
+       ON CONFLICT DO NOTHING`,
       [friend.id, req.user.id]
     );
 
-    res.json({ ok: true, user: friend });
+    res.json({
+      ok: true,
+      user: publicUser(friend)
+    });
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'Friend যোগ করা যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'Friend যোগ করা যায়নি'
+    });
   }
 });
 
@@ -316,142 +408,248 @@ async function isBlocked(a, b) {
   return !!r.rowCount;
 }
 
+async function getMessagesBetween(a, b) {
+  const r = await query(`
+    SELECT
+      m.id,m.sender_id,m.receiver_id,m.type,m.body,m.media_url,
+      m.seen,m.created_at,
+      u.name AS sender_name,u.code AS sender_code
+    FROM messages m
+    JOIN users u ON u.id=m.sender_id
+    WHERE
+      (m.sender_id=$1 AND m.receiver_id=$2)
+      OR
+      (m.sender_id=$2 AND m.receiver_id=$1)
+    ORDER BY m.created_at ASC
+  `, [a, b]);
+
+  return r.rows;
+}
+
 app.get('/api/chats/:code/messages', auth, async (req, res) => {
   try {
     const friend = await findByCode(req.params.code);
-    if (!friend) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
 
-    const r = await query(`
-      SELECT
-        m.id,m.sender_id,m.receiver_id,m.type,m.body,m.media_url,
-        m.seen,m.created_at,
-        u.name AS sender_name,u.code AS sender_code
-      FROM messages m
-      JOIN users u ON u.id=m.sender_id
-      WHERE
-        (m.sender_id=$1 AND m.receiver_id=$2)
-        OR
-        (m.sender_id=$2 AND m.receiver_id=$1)
-      ORDER BY m.created_at ASC
-    `, [req.user.id, friend.id]);
+    if (!friend) {
+      return res.status(404).json({
+        error: 'User পাওয়া যায়নি'
+      });
+    }
 
-    res.json(r.rows);
+    const messages = await getMessagesBetween(
+      req.user.id,
+      friend.id
+    );
+
+    res.json(messages.map(publicMessage));
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'মেসেজ লোড করা যায়নি' });
+    console.error(e);
+    res.status(e.statusCode || 500).json({
+      error: 'মেসেজ লোড করা যায়নি'
+    });
   }
 });
 
 app.post('/api/chats/:code/messages', auth, async (req, res) => {
   try {
     const friend = await findByCode(req.params.code);
-    if (!friend) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
 
-    if (!(await areFriends(req.user.id, friend.id))) {
-      return res.status(403).json({ error: 'আগে Friend যোগ করুন' });
+    if (!friend) {
+      return res.status(404).json({
+        error: 'User পাওয়া যায়নি'
+      });
     }
 
-    if (await isBlocked(req.user.id, friend.id) || await isBlocked(friend.id, req.user.id)) {
-      return res.status(403).json({ error: 'এই চ্যাটটি Block করা আছে' });
+    if (!(await areFriends(req.user.id, friend.id))) {
+      return res.status(403).json({
+        error: 'আগে Friend যোগ করুন'
+      });
+    }
+
+    if (
+      await isBlocked(req.user.id, friend.id) ||
+      await isBlocked(friend.id, req.user.id)
+    ) {
+      return res.status(403).json({
+        error: 'এই চ্যাটটি Block করা আছে'
+      });
     }
 
     const type = String(req.body.type || 'text');
     const body = String(req.body.body || '');
-    const mediaUrl = req.body.mediaUrl ? String(req.body.mediaUrl) : null;
+    const mediaUrl = req.body.mediaUrl
+      ? String(req.body.mediaUrl)
+      : null;
 
     if (!['text', 'image', 'video'].includes(type)) {
-      return res.status(400).json({ error: 'অবৈধ মেসেজ টাইপ' });
+      return res.status(400).json({
+        error: 'অবৈধ মেসেজ টাইপ'
+      });
     }
 
     if (type === 'text' && !body.trim()) {
-      return res.status(400).json({ error: 'মেসেজ খালি' });
+      return res.status(400).json({
+        error: 'মেসেজ খালি'
+      });
+    }
+
+    if ((type === 'image' || type === 'video') && !mediaUrl) {
+      return res.status(400).json({
+        error: 'মিডিয়া ফাইলের URL পাওয়া যায়নি'
+      });
     }
 
     const r = await query(`
-      INSERT INTO messages(sender_id,receiver_id,type,body,media_url)
+      INSERT INTO messages(
+        sender_id,receiver_id,type,body,media_url
+      )
       VALUES($1,$2,$3,$4,$5)
-      RETURNING id,sender_id,receiver_id,type,body,media_url,seen,created_at
-    `, [req.user.id, friend.id, type, body, mediaUrl]);
+      RETURNING
+        id,sender_id,receiver_id,type,body,media_url,
+        seen,created_at
+    `, [
+      req.user.id,
+      friend.id,
+      type,
+      body,
+      mediaUrl
+    ]);
 
-    const message = r.rows[0];
+    const baseMessage = r.rows[0];
+
+    const message = {
+      ...baseMessage,
+      sender_name: req.user.name,
+      sender_code: req.user.code
+    };
+
+    const output = publicMessage(message);
 
     for (const socket of io.sockets.sockets.values()) {
       if (socket.userId === friend.id) {
-        socket.emit('message:new', message);
+        socket.emit('message:new', output);
       }
     }
 
-    res.json(message);
+    for (const socket of io.sockets.sockets.values()) {
+      if (socket.userId === req.user.id) {
+        socket.emit('message:sent', output);
+      }
+    }
+
+    res.json(output);
   } catch (e) {
     console.error(e);
-    res.status(e.statusCode || 500).json({ error: 'মেসেজ পাঠানো যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'মেসেজ পাঠানো যায়নি'
+    });
   }
 });
 
 app.post('/api/chats/:code/read', auth, async (req, res) => {
   try {
     const friend = await findByCode(req.params.code);
-    if (!friend) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
+
+    if (!friend) {
+      return res.status(404).json({
+        error: 'User পাওয়া যায়নি'
+      });
+    }
 
     await query(
       `UPDATE messages
        SET seen=true
-       WHERE sender_id=$1 AND receiver_id=$2 AND seen=false`,
+       WHERE sender_id=$1
+         AND receiver_id=$2
+         AND seen=false`,
       [friend.id, req.user.id]
     );
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'Seen আপডেট করা যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'Seen আপডেট করা যায়নি'
+    });
   }
 });
 
 app.post('/api/block/:code', auth, async (req, res) => {
   try {
     const target = await findByCode(req.params.code);
-    if (!target) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
+
+    if (!target) {
+      return res.status(404).json({
+        error: 'User পাওয়া যায়নি'
+      });
+    }
+
     if (target.id === req.user.id) {
-      return res.status(400).json({ error: 'নিজেকে Block করা যাবে না' });
+      return res.status(400).json({
+        error: 'নিজেকে Block করা যাবে না'
+      });
     }
 
     await query(
-      'INSERT INTO blocks(user_id,blocked_id) VALUES($1,$2) ON CONFLICT DO NOTHING',
+      `INSERT INTO blocks(user_id,blocked_id)
+       VALUES($1,$2)
+       ON CONFLICT DO NOTHING`,
       [req.user.id, target.id]
     );
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'Block করা যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'Block করা যায়নি'
+    });
   }
 });
 
 app.delete('/api/block/:code', auth, async (req, res) => {
   try {
     const target = await findByCode(req.params.code);
-    if (!target) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
+
+    if (!target) {
+      return res.status(404).json({
+        error: 'User পাওয়া যায়নি'
+      });
+    }
 
     await query(
-      'DELETE FROM blocks WHERE user_id=$1 AND blocked_id=$2',
+      `DELETE FROM blocks
+       WHERE user_id=$1 AND blocked_id=$2`,
       [req.user.id, target.id]
     );
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'Unblock করা যায়নি' });
+    res.status(e.statusCode || 500).json({
+      error: 'Unblock করা যায়নি'
+    });
   }
 });
 
 app.post('/api/upload', auth, upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'ফাইল পাওয়া যায়নি' });
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'ফাইল পাওয়া যায়নি'
+      });
+    }
 
     const mime = req.file.mimetype || '';
     let type = null;
-    if (mime.startsWith('image/')) type = 'image';
-    else if (mime.startsWith('video/')) type = 'video';
+
+    if (mime.startsWith('image/')) {
+      type = 'image';
+    } else if (mime.startsWith('video/')) {
+      type = 'video';
+    }
 
     if (!type) {
       fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: 'শুধু ছবি বা ভিডিও পাঠানো যাবে' });
+      return res.status(400).json({
+        error: 'শুধু ছবি বা ভিডিও পাঠানো যাবে'
+      });
     }
 
     res.json({
@@ -461,16 +659,34 @@ app.post('/api/upload', auth, upload.single('file'), async (req, res) => {
     });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'ফাইল আপলোড ব্যর্থ হয়েছে' });
+
+    if (req.file && req.file.path) {
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (_) {}
+    }
+
+    res.status(500).json({
+      error: 'ফাইল আপলোড ব্যর্থ হয়েছে'
+    });
   }
 });
 
 io.use((socket, next) => {
   try {
-    const token = socket.handshake.auth && socket.handshake.auth.token;
-    if (!token) return next(new Error('unauthorized'));
+    const token =
+      socket.handshake.auth &&
+      socket.handshake.auth.token;
+
+    if (!token) {
+      return next(new Error('unauthorized'));
+    }
+
     const data = jwt.verify(token, JWT_SECRET);
     socket.userId = Number(data.id);
+
     next();
   } catch (e) {
     next(new Error('unauthorized'));
@@ -478,33 +694,79 @@ io.use((socket, next) => {
 });
 
 io.on('connection', socket => {
-  socket.emit('presence', { userId: socket.userId, online: true });
-  socket.broadcast.emit('presence', { userId: socket.userId, online: true });
+  socket.emit('presence', {
+    userId: socket.userId,
+    online: true
+  });
+
+  socket.broadcast.emit('presence', {
+    userId: socket.userId,
+    online: true
+  });
 
   socket.on('disconnect', () => {
-    socket.broadcast.emit('presence', { userId: socket.userId, online: false });
+    socket.broadcast.emit('presence', {
+      userId: socket.userId,
+      online: false
+    });
   });
 });
 
-// Keep API routes above this point.
-// Serve the index.html that is in the repository ROOT.
+/*
+ * IMPORTANT:
+ * Serve the repository root index.html explicitly as HTML.
+ * This prevents the browser from displaying the JavaScript/HTML source as text.
+ */
+app.get('/', (req, res) => {
+  res.setHeader(
+    'Content-Type',
+    'text/html; charset=utf-8'
+  );
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+/*
+ * Keep API and Socket.IO requests from falling through to index.html.
+ */
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) {
-    return res.status(404).json({ error: 'Not found' });
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/socket.io/')
+  ) {
+    return res.status(404).json({
+      error: 'Not found'
+    });
   }
+
+  res.setHeader(
+    'Content-Type',
+    'text/html; charset=utf-8'
+  );
+
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 initDb()
   .then(() => {
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`BD Islamic Messenger listening on ${PORT}`);
+      console.log(
+        `BD Islamic Messenger listening on ${PORT}`
+      );
     });
   })
   .catch(err => {
-    console.error('Database initialization failed:', err);
-    // Keep the web service alive so Render can show the health page/logs.
+    console.error(
+      'Database initialization failed:',
+      err
+    );
+
+    /*
+     * Keep the web service alive so Render can show
+     * the health page/logs even if database startup fails.
+     */
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`BD Islamic Messenger listening on ${PORT} without database`);
+      console.log(
+        `BD Islamic Messenger listening on ${PORT} without database`
+      );
     });
   });
