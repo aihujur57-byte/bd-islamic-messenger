@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
@@ -22,23 +23,12 @@ const io = new Server(server, {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
-fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '');
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }
 });
-
-app.use('/uploads', express.static(uploadDir));
 
 /*
  * IMPORTANT:
@@ -86,12 +76,24 @@ async function initDb() {
       phone TEXT UNIQUE NOT NULL,
       pin_hash TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
-      avatar_url TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
     )
   `);
 
-  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
+  await query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS media_files (
+      id TEXT PRIMARY KEY,
+      owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      mime TEXT NOT NULL,
+      original_name TEXT,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
 
   await query(`
     CREATE TABLE IF NOT EXISTS friendships (
@@ -139,7 +141,7 @@ function publicUser(u) {
     country: u.country,
     phone: u.phone,
     code: u.code,
-    avatarUrl: u.avatar_url || ''
+    avatarUrl: u.avatar_url ? String(u.avatar_url) : ''
   };
 }
 
@@ -192,32 +194,6 @@ async function findByCode(code) {
   );
   return r.rows[0] || null;
 }
-
-app.put('/api/profile', auth, async (req, res) => {
-  try {
-    const avatarUrl = req.body && req.body.avatarUrl ? String(req.body.avatarUrl) : '';
-    const name = req.body && req.body.name ? String(req.body.name).trim() : req.user.name;
-    if (!name) return res.status(400).json({ error: 'নাম খালি রাখা যাবে না' });
-    const r = await query(
-      'UPDATE users SET name=$1, avatar_url=$2 WHERE id=$3 RETURNING id,name,country,phone,code,avatar_url',
-      [name, avatarUrl, req.user.id]
-    );
-    res.json(publicUser(r.rows[0]));
-  } catch (e) {
-    console.error(e);
-    res.status(e.statusCode || 500).json({ error: 'প্রোফাইল আপডেট করা যায়নি' });
-  }
-});
-
-app.get('/api/block/:code', auth, async (req, res) => {
-  try {
-    const target = await findByCode(req.params.code);
-    if (!target) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
-    res.json({ blocked: await isBlocked(req.user.id, target.id), blockedBy: await isBlocked(target.id, req.user.id) });
-  } catch (e) {
-    res.status(e.statusCode || 500).json({ error: 'Block status পাওয়া যায়নি' });
-  }
-});
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -603,6 +579,24 @@ app.post('/api/chats/:code/read', auth, async (req, res) => {
   }
 });
 
+app.put('/api/profile', auth, async (req, res) => {
+  try {
+    const name = String(req.body.name || req.user.name).trim();
+    const avatarUrl = req.body.avatarUrl ? String(req.body.avatarUrl) : '';
+    if (!name) return res.status(400).json({ error: 'নাম খালি রাখা যাবে না' });
+
+    const r = await query(
+      `UPDATE users SET name=$1, avatar_url=$2 WHERE id=$3
+       RETURNING id,name,country,phone,code,avatar_url`,
+      [name, avatarUrl || null, req.user.id]
+    );
+    res.json(publicUser(r.rows[0]));
+  } catch (e) {
+    console.error(e);
+    res.status(e.statusCode || 500).json({ error: 'প্রোফাইল আপডেট করা যায়নি' });
+  }
+});
+
 app.post('/api/block/:code', auth, async (req, res) => {
   try {
     const target = await findByCode(req.params.code);
@@ -660,47 +654,50 @@ app.delete('/api/block/:code', auth, async (req, res) => {
 
 app.post('/api/upload', auth, upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        error: 'ফাইল পাওয়া যায়নি'
-      });
-    }
+    if (!req.file) return res.status(400).json({ error: 'ফাইল পাওয়া যায়নি' });
 
     const mime = req.file.mimetype || '';
     let type = null;
+    if (mime.startsWith('image/')) type = 'image';
+    else if (mime.startsWith('video/')) type = 'video';
 
-    if (mime.startsWith('image/')) {
-      type = 'image';
-    } else if (mime.startsWith('video/')) {
-      type = 'video';
-    }
+    if (!type) return res.status(400).json({ error: 'শুধু ছবি বা ভিডিও পাঠানো যাবে' });
 
-    if (!type) {
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({
-        error: 'শুধু ছবি বা ভিডিও পাঠানো যাবে'
-      });
-    }
+    const id = crypto.randomBytes(24).toString('hex');
+    await query(
+      `INSERT INTO media_files(id,owner_id,mime,original_name,data)
+       VALUES($1,$2,$3,$4,$5)`,
+      [id, req.user.id, mime, req.file.originalname || '', req.file.buffer]
+    );
 
     res.json({
       ok: true,
       type,
-      url: `/uploads/${encodeURIComponent(req.file.filename)}`
+      url: `/api/media/${id}`
     });
   } catch (e) {
     console.error(e);
+    res.status(e.statusCode || 500).json({ error: 'ফাইল আপলোড ব্যর্থ হয়েছে' });
+  }
+});
 
-    if (req.file && req.file.path) {
-      try {
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-      } catch (_) {}
-    }
-
-    res.status(500).json({
-      error: 'ফাইল আপলোড ব্যর্থ হয়েছে'
-    });
+// Persistent media is stored in PostgreSQL, so it survives Render restarts/redeploys.
+app.get('/api/media/:id', async (req, res) => {
+  try {
+    const r = await query(
+      'SELECT mime,original_name,data FROM media_files WHERE id=$1',
+      [String(req.params.id)]
+    );
+    if (!r.rowCount) return res.status(404).end();
+    const m = r.rows[0];
+    res.setHeader('Content-Type', m.mime);
+    res.setHeader('Content-Length', m.data.length);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    if (m.original_name) res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(m.original_name)}`);
+    res.end(m.data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).end();
   }
 });
 
