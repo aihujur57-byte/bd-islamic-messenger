@@ -86,9 +86,12 @@ async function initDb() {
       phone TEXT UNIQUE NOT NULL,
       pin_hash TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
+      avatar_url TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
     )
   `);
+
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 
   await query(`
     CREATE TABLE IF NOT EXISTS friendships (
@@ -135,7 +138,8 @@ function publicUser(u) {
     name: u.name,
     country: u.country,
     phone: u.phone,
-    code: u.code
+    code: u.code,
+    avatarUrl: u.avatar_url || ''
   };
 }
 
@@ -166,7 +170,7 @@ async function auth(req, res, next) {
     const data = jwt.verify(token, JWT_SECRET);
 
     const r = await query(
-      'SELECT id,name,country,phone,code FROM users WHERE id=$1',
+      'SELECT id,name,country,phone,code,avatar_url FROM users WHERE id=$1',
       [data.id]
     );
 
@@ -183,11 +187,37 @@ async function auth(req, res, next) {
 
 async function findByCode(code) {
   const r = await query(
-    'SELECT id,name,country,phone,code FROM users WHERE code=$1',
+    'SELECT id,name,country,phone,code,avatar_url FROM users WHERE code=$1',
     [String(code || '').trim()]
   );
   return r.rows[0] || null;
 }
+
+app.put('/api/profile', auth, async (req, res) => {
+  try {
+    const avatarUrl = req.body && req.body.avatarUrl ? String(req.body.avatarUrl) : '';
+    const name = req.body && req.body.name ? String(req.body.name).trim() : req.user.name;
+    if (!name) return res.status(400).json({ error: 'নাম খালি রাখা যাবে না' });
+    const r = await query(
+      'UPDATE users SET name=$1, avatar_url=$2 WHERE id=$3 RETURNING id,name,country,phone,code,avatar_url',
+      [name, avatarUrl, req.user.id]
+    );
+    res.json(publicUser(r.rows[0]));
+  } catch (e) {
+    console.error(e);
+    res.status(e.statusCode || 500).json({ error: 'প্রোফাইল আপডেট করা যায়নি' });
+  }
+});
+
+app.get('/api/block/:code', auth, async (req, res) => {
+  try {
+    const target = await findByCode(req.params.code);
+    if (!target) return res.status(404).json({ error: 'User পাওয়া যায়নি' });
+    res.json({ blocked: await isBlocked(req.user.id, target.id), blockedBy: await isBlocked(target.id, req.user.id) });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: 'Block status পাওয়া যায়নি' });
+  }
+});
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -226,7 +256,7 @@ app.post('/api/register', async (req, res) => {
     const r = await query(
       `INSERT INTO users(name,country,phone,pin_hash,code)
        VALUES($1,$2,$3,$4,$5)
-       RETURNING id,name,country,phone,code`,
+       RETURNING id,name,country,phone,code,avatar_url`,
       [name, country, phone, pinHash, pin]
     );
 
@@ -283,7 +313,7 @@ app.get('/api/friends', auth, async (req, res) => {
   try {
     const r = await query(`
       SELECT
-        u.id, u.name, u.country, u.phone, u.code,
+        u.id, u.name, u.country, u.phone, u.code, u.avatar_url,
         EXISTS(
           SELECT 1 FROM messages m
           WHERE m.sender_id=u.id
