@@ -7,7 +7,16 @@
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Bengali",sans-serif;background:#eef7f0;color:#123;font-size:15px}.app{max-width:620px;margin:auto;min-height:100vh;background:#fff;box-shadow:0 0 20px #0001}.top{background:#087f3d;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}.top h2{margin:0;font-size:20px}.page{padding:16px}.card{background:#fff;border:1px solid #dcebe0;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 3px 12px #0000000a}.hero{text-align:center;padding:30px 16px}.logo{font-size:48px}.muted{color:#68766d;font-size:13px}.input{width:100%;padding:13px 14px;border:1px solid #c9d9ce;border-radius:12px;margin:6px 0 10px;font-size:16px;outline:none}.input:focus{border-color:#087f3d}.btn{border:0;border-radius:12px;padding:12px 15px;background:#087f3d;color:#fff;font-size:15px;font-weight:700;cursor:pointer}.btn.alt{background:#e9f5ed;color:#087f3d}.btn.red{background:#c62828}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.center{text-align:center}.hide{display:none!important}.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1}.friend{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #edf2ee;cursor:pointer}.avatar{width:42px;height:42px;border-radius:50%;background:#087f3d;color:#fff;display:grid;place-items:center;font-weight:bold}.friend b{display:block}.dot{width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block}.dot.on{background:#16a34a}.chat{height:calc(100vh - 145px);display:flex;flex-direction:column}.msgs{flex:1;overflow:auto;padding:14px;background:#f5faf6}.bubble{max-width:78%;padding:10px 12px;border-radius:15px;margin:6px 0;word-wrap:break-word}.me{margin-left:auto;background:#cfeedd;border-bottom-right-radius:4px}.them{background:#fff;border:1px solid #e1ebe4;border-bottom-left-radius:4px}.bubble img,.bubble video{max-width:100%;border-radius:10px;display:block}.composer{display:flex;gap:6px;padding:10px;border-top:1px solid #ddd;background:#fff}.composer input{flex:1;margin:0}.small{font-size:11px;color:#718078;margin-top:4px}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:flex-end;z-index:20}.sheet{background:#fff;width:100%;max-width:620px;margin:auto;border-radius:20px 20px 0 0;padding:18px;max-height:85vh;overflow:auto}.danger{color:#b71c1c}.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#123;color:#fff;padding:11px 15px;border-radius:12px;z-index:50;max-width:90%;text-align:center}
-</style>
+
+.fab{position:fixed;right:max(22px,calc((100vw - 620px)/2 + 22px));bottom:82px;width:62px;height:62px;border:0;border-radius:50%;background:#079b86;color:#fff;font-size:38px;box-shadow:0 6px 18px #0003;z-index:8}
+.bottom{position:fixed;bottom:0;left:0;right:0;max-width:620px;margin:auto;height:70px;background:#fff;border-top:1px solid #dce9e2;display:flex;z-index:9}
+.bottom button{flex:1;border:0;background:#fff;color:#718078;font-weight:700;font-size:14px}
+.bottom button.active{color:#087f3d}
+.bottom .ico{display:block;font-size:25px;line-height:29px}
+.profile-big{width:88px;height:88px;border-radius:50%;overflow:hidden;background:#d8f1e7;color:#087f3d;display:grid;place-items:center;font-size:38px;font-weight:bold;margin:0 auto 12px}
+.profile-big img{width:100%;height:100%;object-fit:cover}
+.upload-box{border:1px dashed #a8cbbb;border-radius:14px;padding:14px;text-align:center;background:#f5fbf7;margin:12px 0}
+
 </head>
 <body>
 <div id="app" class="app"></div><div id="modal" class="modal hide"><div id="sheet" class="sheet"></div></div><div id="toast" class="toast hide"></div>
@@ -16,32 +25,128 @@ const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g
 let token=localStorage.getItem('bdim_token')||'', me=null, friends=[], current=null, socket=null;
 const accounts=()=>JSON.parse(localStorage.getItem('bdim_accounts')||'[]');
 function saveAccount(u,t){let a=accounts().filter(x=>x.phone!==u.phone);a.unshift({name:u.name,phone:u.phone,code:u.code,token:t});localStorage.setItem('bdim_accounts',JSON.stringify(a).slice(0,30000));}
+function avatarKey(code){return 'bdim_avatar_'+String(code||'')}
+function getAvatar(code){return localStorage.getItem(avatarKey(code))||''}
+function setAvatar(code,url){if(code&&url)localStorage.setItem(avatarKey(code),url)}
+function mergeLocalAvatar(u){if(u)u.avatarUrl=getAvatar(u.code);return u}
+
 function toast(x){$('toast').textContent=x;$('toast').classList.remove('hide');setTimeout(()=>$('toast').classList.add('hide'),2200)}
 async function api(url,opt={}){let h=opt.headers||{};if(!(opt.body instanceof FormData))h['Content-Type']='application/json';if(token)h.Authorization='Bearer '+token;let r=await fetch(url,{...opt,headers:h});let d;try{d=await r.json()}catch{d={}}if(!r.ok)throw Error(d.error||'সার্ভার সমস্যা');return d}
-function shell(title='BD Islamic Messenger',back=false){return `<div class="top"><div>${back?'<button class="btn alt" onclick="home()">←</button>':''}</div><h2>${esc(title)}</h2><button class="btn alt" onclick="menu()">☰</button></div><div id="content" class="page"></div>`}
+function shell(title='BD Islamic Messenger',back=false){return `<div class="top"><div>${back?'<button class="btn alt" onclick="home()">←</button>':''}</div><h2>${esc(title)}</h2><div class="row" style="gap:4px;flex:0 0 auto">${back?'<button class="btn alt" onclick="friendProfile()">👤</button>':''}<button class="btn alt" onclick="menu()">☰</button></div></div><div id="content" class="page"></div>`}
 function auth(){ $('app').innerHTML=`<div class="hero"><div class="logo">☪️</div><h1>BD Islamic Messenger</h1><p class="muted">সহজ, নিরাপদ ও ইসলামিক থিমের অনলাইন মেসেঞ্জার</p></div><div class="page"><div class="tabs"><button id="lt" class="btn" onclick="showLogin()">লগইন</button><button id="rt" class="btn alt" onclick="showRegister()">নতুন অ্যাকাউন্ট</button></div><div id="authbox" class="card"></div></div>`;showLogin()}
 function showLogin(){ $('authbox').innerHTML=`<h3>লগইন</h3><label>ফোন নম্বর</label><input id="phone" class="input" inputmode="tel" placeholder="01XXXXXXXXX"><label>৪ সংখ্যার User Code / PIN</label><input id="pin" class="input" inputmode="numeric" maxlength="4" placeholder="1234"><button class="btn" style="width:100%" onclick="login()">লগইন করুন</button>` }
 function showRegister(){ $('authbox').innerHTML=`<h3>নতুন অ্যাকাউন্ট</h3><input id="name" class="input" placeholder="আপনার নাম"><input id="phone" class="input" inputmode="tel" placeholder="01XXXXXXXXX"><input id="pin" class="input" inputmode="numeric" maxlength="4" placeholder="নিজের ৪ সংখ্যার User Code / PIN"><p class="muted">OTP লাগবে না। ৪ সংখ্যার কোডটি মনে রাখবেন।</p><button class="btn" style="width:100%" onclick="register()">অ্যাকাউন্ট তৈরি করুন</button>` }
 async function login(){try{let phone=$('phone').value.trim(),pin=$('pin').value.trim();if(!/^\d{4}$/.test(pin))throw Error('৪ সংখ্যার কোড দিন');let d=await api('/api/login',{method:'POST',body:JSON.stringify({phone,pin})});token=d.token;me=d.user;localStorage.setItem('bdim_token',token);saveAccount(me,token);await start()}catch(e){toast(e.message)}}
 async function register(){try{let name=$('name').value.trim(),phone=$('phone').value.trim(),pin=$('pin').value.trim();if(!name||!phone||!/^[0-9]{4}$/.test(pin))throw Error('নাম, ফোন ও ৪ সংখ্যার কোড দিন');let d=await api('/api/register',{method:'POST',body:JSON.stringify({name,country:'+880',phone,pin})});token=d.token;me=d.user;localStorage.setItem('bdim_token',token);saveAccount(me,token);await start()}catch(e){toast(e.message)}}
-async function start(){try{me=await api('/api/me');friends=await api('/api/friends');home();connect()}catch(e){token='';localStorage.removeItem('bdim_token');auth()}}
+async function start(){try{me=mergeLocalAvatar(await api('/api/me'));friends=(await api('/api/friends')).map(mergeLocalAvatar);home();connect()}catch(e){token='';localStorage.removeItem('bdim_token');auth()}}
 function home(){current=null;$('app').innerHTML=shell('BD Islamic Messenger');renderHome()}
-function renderHome(){let c=$('content');c.innerHTML=`<div class="card"><b>${esc(me.name)}</b><div class="muted">User Code: ${esc(me.code)} · ${esc(me.phone)}</div></div><div class="row"><button class="btn" onclick="addFriend()">＋ Friend যোগ করুন</button><button class="btn alt" onclick="profile()">প্রোফাইল</button></div><div class="card"><h3>আমার Friends</h3><div id="flist"></div></div>`;renderFriends()}
-function renderFriends(){let el=$('flist');if(!friends.length){el.innerHTML='<p class="muted">এখনও কোনো Friend নেই। User Code দিয়ে Friend যোগ করুন।</p>';return}el.innerHTML=friends.map(f=>`<div class="friend" onclick="openChat('${esc(f.code)}')"><div class="avatar">${esc((f.name||'?')[0])}</div><div style="flex:1"><b>${esc(f.name)}</b><span class="muted">${esc(f.code)}</span><div><span class="dot ${f.online?'on':''}"></span> ${f.online?'Online':'Offline'} ${f.unread?' · নতুন মেসেজ':''}</div></div></div>`).join('')}
+function renderHome(){
+  const av=me.avatarUrl
+    ? '<div class="profile-big"><img src="'+esc(me.avatarUrl)+'"></div>'
+    : '<div class="profile-big">'+esc((me.name||'B')[0])+'</div>';
+  let c=$('content');
+  c.innerHTML='<div class="card center">'+av+
+    '<h2 style="margin:6px 0">'+esc(me.name)+'</h2>'+
+    '<div class="muted">User Code: '+esc(me.code)+' · '+esc(me.phone)+'</div>'+
+    '<button class="btn alt" style="margin-top:12px" onclick="profile()">👤 প্রোফাইল</button>'+
+    '</div>'+
+    '<div class="row"><button class="btn" onclick="addFriend()">＋ Friend যোগ করুন</button>'+
+    '<button class="btn alt" onclick="profile()">প্রোফাইল</button></div>'+
+    '<h2 style="margin:22px 0 10px">আমার Chats</h2>'+
+    '<div class="card"><div id="flist"></div></div>';
+  renderFriends();
+  c.insertAdjacentHTML('beforeend','<div class="bottom">'+
+    '<button class="active" onclick="home()"><span class="ico">💬</span>চ্যাট</button>'+
+    '<button onclick="friendsPage()"><span class="ico">👥</span>বন্ধু</button>'+
+    '<button onclick="settingsPage()"><span class="ico">⚙️</span>সেটিংস</button>'+
+    '</div>');
+  const fab=document.createElement('button');
+  fab.className='fab';fab.textContent='+';fab.onclick=addFriend;
+  $('app').appendChild(fab);
+}
+function friendAvatar(f,size='42px'){
+  const av=f.avatarUrl||getAvatar(f.code);
+  return av?`<div class="avatar" style="width:${size};height:${size};overflow:hidden"><img src="${esc(av)}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div class="avatar" style="width:${size};height:${size}">${esc((f.name||'?')[0])}</div>`;
+}
+function sortedFriends(){return [...friends].sort((a,b)=>Number(b.unread)-Number(a.unread)||String(a.name).localeCompare(String(b.name),'bn'))}
+function renderFriends(){
+  let el=$('flist');if(!el)return;
+  if(!friends.length){el.innerHTML='<p class="muted center">এখনও কোনো Friend নেই। User Code দিয়ে Friend যোগ করুন।</p>';return;}
+  el.innerHTML=sortedFriends().map(f=>`<div class="friend" onclick="openChat('${esc(f.code)}')">${friendAvatar(f)}<div style="flex:1;min-width:0"><b style="font-size:16px;${f.unread?'font-weight:800':''}">${esc(f.name)}</b><div class="muted"><span class="dot ${f.online?'on':''}"></span> ${f.online?'Online':'Offline'}${f.unread?' · <strong style="color:#087f3d">নতুন মেসেজ</strong>':''}</div></div><span class="muted">›</span></div>`).join('');
+}
+function friendsPage(){
+  current=null;$('app').innerHTML=shell('বন্ধুরা');$('content').innerHTML='<div class="card"><h2>আমার Friends</h2><div id="friendPageList"></div></div>';
+  const el=$('friendPageList');
+  if(!friends.length) el.innerHTML='<p class="muted">কোনো Friend নেই।</p>';
+  else el.innerHTML=sortedFriends().map(f=>`<div class="friend" onclick="openChat('${esc(f.code)}')">${friendAvatar(f)}<div style="flex:1"><b style="${f.unread?'font-weight:800':''}">${esc(f.name)}</b><div class="muted">Code: ${esc(f.code)}${f.unread?' · নতুন মেসেজ':''}</div></div></div>`).join('');
+  $('content').insertAdjacentHTML('beforeend','<div class="bottom"><button onclick="home()"><span class="ico">💬</span>চ্যাট</button><button class="active"><span class="ico">👥</span>বন্ধু</button><button onclick="settingsPage()"><span class="ico">⚙️</span>সেটিংস</button></div>');
+}
+function settingsPage(){
+  $('app').innerHTML=shell('সেটিংস');
+  $('content').innerHTML='<div class="card"><h2>সেটিংস</h2>'+
+    '<button class="btn alt" style="width:100%;margin:5px 0" onclick="profile()">👤 আমার প্রোফাইল</button>'+
+    '<button class="btn alt" style="width:100%;margin:5px 0" onclick="accountsMenu()">👥 Account Switch</button>'+
+    '<button class="btn red" style="width:100%;margin:5px 0" onclick="logout()">Logout</button></div>'+
+    '<div class="bottom"><button onclick="home()"><span class="ico">💬</span>চ্যাট</button>'+
+    '<button onclick="friendsPage()"><span class="ico">👥</span>বন্ধু</button>'+
+    '<button class="active"><span class="ico">⚙️</span>সেটিংস</button></div>';
+}
 async function addFriend(){let code=prompt('বন্ধুর ৪ সংখ্যার User Code দিন');if(!code)return;try{let d=await api('/api/friends/add',{method:'POST',body:JSON.stringify({code})});friends=await api('/api/friends');toast(d.user.name+' Friend হিসেবে যোগ হয়েছে');renderHome()}catch(e){toast(e.message)}}
 async function openChat(code){current=friends.find(x=>x.code===code)||null;if(!current)return;$('app').innerHTML=shell(current.name,true);$('content').className='chat';$('content').innerHTML='<div id="msgs" class="msgs">লোড হচ্ছে...</div><div class="composer"><input id="msg" class="input" placeholder="মেসেজ লিখুন..." onkeydown="if(event.key===\'Enter\')sendText()"><button class="btn" onclick="sendText()">➤</button><button class="btn alt" onclick="pickMedia()">📎</button><input id="file" type="file" accept="image/*,video/*" hidden onchange="sendMedia()"></div>';await loadMessages();await api('/api/chats/'+encodeURIComponent(code)+'/read',{method:'POST'}).catch(()=>{});friends=friends.map(f=>f.code===code?{...f,unread:false}:f)}
 async function loadMessages(){try{let d=await api('/api/chats/'+encodeURIComponent(current.code)+'/messages');renderMessages(Array.isArray(d)?d:(d.messages||[]))}catch(e){toast(e.message)}}
 function renderMessages(arr){let el=$('msgs');if(!el)return;el.innerHTML=arr.map(m=>{let mine=String(m.senderCode)===String(me.code);let media=m.type==='image'?`<img src="${esc(m.mediaUrl)}">`:m.type==='video'?`<video src="${esc(m.mediaUrl)}" controls></video>`:'';return `<div class="bubble ${mine?'me':'them'}">${media}${m.body?`<div>${esc(m.body)}</div>`:''}<div class="small">${new Date(m.createdAt).toLocaleString('bn-BD')} ${mine?(m.seen?'✓✓':'✓'):''}</div></div>`}).join('');el.scrollTop=el.scrollHeight}
 async function sendText(){let v=$('msg').value.trim();if(!v||!current)return;try{await api('/api/chats/'+encodeURIComponent(current.code)+'/messages',{method:'POST',body:JSON.stringify({type:'text',body:v})});$('msg').value='';await loadMessages()}catch(e){toast(e.message)}}
 function pickMedia(){$('file').click()}
-async function sendMedia(){let f=$('file').files[0];if(!f)return;try{let fd=new FormData();fd.append('file',f);let up=await api('/api/upload',{method:'POST',body:fd});await api('/api/chats/'+encodeURIComponent(current.code)+'/messages',{method:'POST',body:JSON.stringify({type:up.type,mediaUrl:up.url})});await loadMessages()}catch(e){toast(e.message)}$('file').value=''}
-function profile(){ $('modal').classList.remove('hide');$('sheet').innerHTML=`<h2>আমার প্রোফাইল</h2><div class="card"><b>${esc(me.name)}</b><p>ফোন: ${esc(me.phone)}</p><p>User Code: <b>${esc(me.code)}</b></p><p class="muted">BD Islamic Messenger</p></div><button class="btn red" style="width:100%" onclick="logout()">লগআউট</button><button class="btn alt" style="width:100%;margin-top:8px" onclick="closeModal()">বন্ধ করুন</button>`}
+async function sendMedia(){let f=$('file').files[0];if(!f)return;if(f.size>50*1024*1024){toast('ফাইল ৫০ MB-এর মধ্যে রাখুন');$('file').value='';return}try{let fd=new FormData();fd.append('file',f);let up=await api('/api/upload',{method:'POST',body:fd});await api('/api/chats/'+encodeURIComponent(current.code)+'/messages',{method:'POST',body:JSON.stringify({type:up.type,mediaUrl:up.url})});await loadMessages()}catch(e){toast(e.message)}$('file').value=''}
+function profile(){
+  const av=me.avatarUrl
+    ? '<div class="profile-big"><img src="'+esc(me.avatarUrl)+'"></div>'
+    : '<div class="profile-big">'+esc((me.name||'B')[0])+'</div>';
+  $('modal').classList.remove('hide');
+  $('sheet').innerHTML='<h2 class="center">আমার প্রোফাইল</h2>'+
+    av+
+    '<div class="card"><h3 class="center">'+esc(me.name)+'</h3>'+
+    '<p>ফোন: '+esc(me.phone)+'</p>'+
+    '<p>User Code: <b>'+esc(me.code)+'</b></p></div>'+
+    '<div class="upload-box"><b>প্রোফাইল ছবি পরিবর্তন করুন</b>'+
+    '<p class="muted">ছবি নির্বাচন করুন</p>'+
+    '<input id="profileFile" type="file" accept="image/*" onchange="uploadProfilePhoto()"></div>'+
+    '<button class="btn red" style="width:100%;margin-top:8px" onclick="logout()">লগআউট</button>'+
+    '<button class="btn alt" style="width:100%;margin-top:8px" onclick="closeModal()">বন্ধ করুন</button>';
+}
+async function uploadProfilePhoto(){
+  const input=$('profileFile'),f=input&&input.files[0];
+  if(!f)return;
+  if(!f.type.startsWith('image/')){toast('শুধু ছবি নির্বাচন করুন');input.value='';return}
+  try{
+    toast('প্রোফাইল ছবি আপলোড হচ্ছে...');
+    const fd=new FormData();fd.append('file',f);
+    const up=await api('/api/upload',{method:'POST',body:fd});
+    const updated=await api('/api/profile',{method:'PUT',body:JSON.stringify({avatarUrl:up.url,name:me.name})});
+    me=updated;setAvatar(me.code,up.url);saveAccount(me,token);
+    toast('প্রোফাইল ছবি আপলোড হয়েছে');closeModal();home();
+  }catch(e){toast(e.message)}
+  input.value='';
+}
+function friendProfile(){
+  if(!current)return;
+  const av=current.avatarUrl||getAvatar(current.code);
+  $('modal').classList.remove('hide');
+  $('sheet').innerHTML='<h2 class="center">বন্ধুর প্রোফাইল</h2>'+
+    (av?'<div class="profile-big"><img src="'+esc(av)+'"></div>':'<div class="profile-big">'+esc((current.name||'?')[0])+'</div>')+
+    '<div class="card"><h3 class="center">'+esc(current.name)+'</h3><p>Phone: '+esc(current.phone||'')+'</p><p>User Code: <b>'+esc(current.code)+'</b></p><p class="muted">'+(current.online?'Online':'Offline')+'</p></div>'+ 
+    '<button class="btn alt" style="width:100%;margin-top:6px" onclick="closeModal()">চ্যাটে ফিরে যান</button>'+ 
+    '<button class="btn red" style="width:100%;margin-top:8px" onclick="blockFriend()">🚫 Block</button>'+ 
+    '<button class="btn alt" style="width:100%;margin-top:8px" onclick="unblockFriend()">↩️ Unblock</button>';
+}
+async function blockFriend(){if(!current)return;try{await api('/api/block/'+encodeURIComponent(current.code),{method:'POST'});toast('Friend Block করা হয়েছে');closeModal()}catch(e){toast(e.message)}}
+async function unblockFriend(){if(!current)return;try{await api('/api/block/'+encodeURIComponent(current.code),{method:'DELETE'});toast('Friend Unblock করা হয়েছে');closeModal()}catch(e){toast(e.message)}}
 function menu(){ $('modal').classList.remove('hide');$('sheet').innerHTML=`<h2>Menu</h2><button class="btn alt" style="width:100%;margin:5px 0" onclick="home();closeModal()">🏠 Home</button><button class="btn alt" style="width:100%;margin:5px 0" onclick="addFriend();closeModal()">＋ Friend যোগ করুন</button><button class="btn alt" style="width:100%;margin:5px 0" onclick="accountsMenu()">👥 Account Switch</button><button class="btn alt" style="width:100%;margin:5px 0" onclick="profile();">👤 Profile</button><button class="btn red" style="width:100%;margin:5px 0" onclick="logout()">Logout</button>`}
 function accountsMenu(){let a=accounts();$('sheet').innerHTML='<h2>Saved Accounts</h2>'+a.map((x,i)=>`<div class="card"><b>${esc(x.name)}</b><div class="muted">${esc(x.phone)} · ${esc(x.code)}</div><button class="btn" style="margin-top:8px" onclick="switchAccount(${i})">এই অ্যাকাউন্টে ঢুকুন</button></div>`).join('')+'<button class="btn alt" onclick="closeModal()">বন্ধ</button>'}
 async function switchAccount(i){let a=accounts()[i];if(!a)return;token=a.token;localStorage.setItem('bdim_token',token);closeModal();await start()}
 function logout(){token='';me=null;localStorage.removeItem('bdim_token');if(socket)socket.disconnect();closeModal();auth()}
 function closeModal(){$('modal').classList.add('hide')}
-function connect(){if(socket)socket.disconnect();socket=io({auth:{token}});socket.on('message:new',m=>{if(current&&String(m.senderCode)===String(current.code)){loadMessages();api('/api/chats/'+encodeURIComponent(current.code)+'/read',{method:'POST'}).catch(()=>{})}else{friends=friends.map(f=>f.code===m.senderCode?{...f,unread:true}:f);if(!current)renderFriends()}});socket.on('message:sent',m=>{if(current&&String(m.senderCode)===String(me.code))loadMessages()});socket.on('presence',p=>{let f=friends.find(x=>x.id===p.userId);if(f){f.online=p.online;renderFriends()}})}
+function connect(){if(socket)socket.disconnect();socket=io({auth:{token}});socket.on('message:new',m=>{if(current&&String(m.senderCode)===String(current.code)){loadMessages();api('/api/chats/'+encodeURIComponent(current.code)+'/read',{method:'POST'}).catch(()=>{})}else{friends=friends.map(f=>f.code===m.senderCode?{...f,unread:true}:f);renderFriends()}});socket.on('message:sent',m=>{if(current&&String(m.senderCode)===String(me.code))loadMessages()});socket.on('presence',p=>{let f=friends.find(x=>x.id===p.userId);if(f){f.online=p.online;renderFriends()}})}
 (async()=>{if(token)await start();else auth()})();
 </script>
 </body>
