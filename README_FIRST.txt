@@ -1,9 +1,22 @@
-BD Islamic Messenger v3
+BD Islamic Messenger v4
 
-এই প্যাকেজে Register -> Login -> Home, Friend Code, real-time text, image/video/audio upload (বর্তমান 50MB request limit), profile photo, 72-hour stories, block/unblock এবং basic WebRTC signaling যুক্ত করা হয়েছে।
+এই সংস্করণে UI এবং বর্তমান PostgreSQL/Socket.IO backend একসাথে রাখা হয়েছে।
+মূল ফ্লো: Splash -> Register -> Login -> Home.
 
-Render-এর DATABASE_URL এবং JWT_SECRET আগের মতোই রাখতে হবে।
+যোগ করা/উন্নত করা হয়েছে:
+- Islamic splash/login/register UI
+- Friend Code search/add
+- Home story row
+- Profile + profile photo upload
+- Settings, Language, Privacy, Notifications, Blocked Contacts, Accounts, About
+- Friend profile menu: audio/video call, block/unblock, delete friend
+- Text, image, video, audio/voice message UI
+- Story create এবং 72-hour backend expiry
+- Socket.IO realtime message/presence
+- WebRTC call signaling UI
 
-গুরুত্বপূর্ণ: PostgreSQL-এর পুরোনো account নিজে থেকে মুছে দেওয়া হয়নি, যাতে ভুলে data loss না হয়। সত্যিই নতুন করে শুরু করতে চাইলে database-এর users/friendships/messages/media_files/stories data আলাদা করে পরিষ্কার করতে হবে।
-
-2GB/3GB ভিডিওর জন্য PostgreSQL BYTEA নয়, object storage + multipart/chunk upload প্রয়োজন। এই v3-এর 50MB limit-এর বাইরে সেটি এখনও production-ready নয়।
+গুরুত্বপূর্ণ:
+- Render-এর DATABASE_URL এবং JWT_SECRET পরিবর্তন করবেন না।
+- বর্তমান server upload limit 50MB; 2GB/3GB production media-এর জন্য object storage দরকার।
+- WebRTC call-এর জন্য HTTPS (Render-এ আছে) এবং কিছু নেটওয়ার্কে TURN server প্রয়োজন হতে পারে।
+- এই ZIP-এর server.js বর্তমান v3 server-এর ওপর ছোট API additions করেছে; PostgreSQL tables স্বয়ংক্রিয়ভাবে তৈরি/আপডেট হবে।
