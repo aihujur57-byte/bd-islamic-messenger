@@ -1,9 +1,8 @@
-# Islamic Messenger — Starter ZIP
+# BD Islamic Messenger
+Render-ready static frontend prototype.
 
-এটি একটি কাজ করা **frontend/PWA prototype**। Browser/localStorage-এর মাধ্যমে register/login session, friend code, friend list, chat UI, message delete, block/unblock, profile ও settings-এর demo flow আছে।
+## Render
+Create **Static Site** from this repository. No `vite.config.js` is needed for this version because it does not run the Vite development server. Build Command can be empty; Publish Directory should be `.`.
 
-## গুরুত্বপূর্ণ
-এটি এখনো production internet messenger backend নয়। সত্যিকারের বহু-ব্যবহারকারী chat, OTP/SMS verification, realtime messaging, image/audio/video upload, push notification, WebRTC audio/video call এবং Play Store release-এর জন্য Firebase/Supabase/নিজস্ব backend ও Android wrapper/configuration লাগবে।
-
-## চালানো
-`index.html` খুললেই prototype দেখা যাবে। PWA install-এর জন্য HTTPS hosting দরকার।
+## Important
+This is a frontend prototype. Real multi-device accounts, realtime messaging, OTP, media uploads, push notifications and WebRTC calls require a backend/database and secure authentication.
