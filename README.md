@@ -1,18 +1,9 @@
-# Islamic Messenger
+# Islamic Messenger — Starter ZIP
 
-A fresh Android/Web-ready Messenger starter project with a premium Islamic visual identity.
+এটি একটি কাজ করা **frontend/PWA prototype**। Browser/localStorage-এর মাধ্যমে register/login session, friend code, friend list, chat UI, message delete, block/unblock, profile ও settings-এর demo flow আছে।
 
-## Included
-- Responsive mobile-first frontend
-- Login / registration UI
-- Persistent local session demo
-- Multiple-account switcher demo
-- Chats / Stories / Friends / Profile navigation
-- Friend Code UI
-- Chat reply/edit/delete/pin controls
-- Story 72-hour expiry model
-- Media and call UI foundations
+## গুরুত্বপূর্ণ
+এটি এখনো production internet messenger backend নয়। সত্যিকারের বহু-ব্যবহারকারী chat, OTP/SMS verification, realtime messaging, image/audio/video upload, push notification, WebRTC audio/video call এবং Play Store release-এর জন্য Firebase/Supabase/নিজস্ব backend ও Android wrapper/configuration লাগবে।
 
-## Important
-This ZIP is a runnable frontend prototype/starter, not a production messaging backend.
-Production realtime messaging, PostgreSQL persistence, secure authentication, media storage, push notifications, WebRTC calls, and Play Store packaging require backend/cloud configuration and testing.
+## চালানো
+`index.html` খুললেই prototype দেখা যাবে। PWA install-এর জন্য HTTPS hosting দরকার।
