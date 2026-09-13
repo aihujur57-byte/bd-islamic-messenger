@@ -1,11 +1,6 @@
 services:
   - type: web
     name: bd-islamic-messenger
-    runtime: node
+    env: node
     buildCommand: npm install
     startCommand: npm start
-    envVars:
-      - key: JWT_SECRET
-        sync: false
-      - key: DATABASE_URL
-        sync: false
